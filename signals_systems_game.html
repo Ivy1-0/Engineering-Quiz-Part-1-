@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIGNAL/SYSTEM :: Bench Trainer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root{
+  --housing:#0a0e0c;
+  --panel:#101512;
+  --screen:#0d1912;
+  --screen-edge:#1a2a20;
+  --phosphor:#4dffa0;
+  --phosphor-dim:#2a8f5e;
+  --amber:#ffb627;
+  --red:#ff5c5c;
+  --muted:#5f8a72;
+  --grid-line: rgba(77,255,160,0.08);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Space Grotesk', sans-serif;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--housing);
+  color:var(--phosphor);
+  font-family:var(--mono);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px 14px;
+}
+
+.chassis{
+  width:100%;
+  max-width:760px;
+  background:linear-gradient(180deg,#141a17,#0e1310);
+  border:1px solid #23302a;
+  border-radius:18px;
+  box-shadow:0 30px 60px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.03);
+  padding:18px;
+}
+
+/* ---------- header strip ---------- */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:2px 8px 14px 8px;
+  border-bottom:1px solid #1e2622;
+  margin-bottom:14px;
+}
+.brand{
+  font-family:var(--display);
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:0.08em;
+  color:#d8ffe9;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.brand .dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 8px var(--red);
+  animation:blink 1.4s infinite;
+}
+@keyframes blink{0%,60%{opacity:1;}61%,100%{opacity:0.15;}}
+.readouts{
+  display:flex;
+  gap:14px;
+  font-size:11px;
+  color:var(--muted);
+}
+.readouts b{color:var(--phosphor); font-weight:600;}
+
+/* ---------- CRT screen ---------- */
+.screen{
+  position:relative;
+  background:
+    repeating-linear-gradient(0deg, var(--grid-line) 0px, var(--grid-line) 1px, transparent 1px, transparent 24px),
+    repeating-linear-gradient(90deg, var(--grid-line) 0px, var(--grid-line) 1px, transparent 1px, transparent 24px),
+    radial-gradient(ellipse at 50% 0%, #142019 0%, var(--screen) 70%);
+  border:1px solid var(--screen-edge);
+  border-radius:10px;
+  padding:18px;
+  min-height:420px;
+  overflow:hidden;
+  box-shadow:inset 0 0 40px rgba(0,0,0,0.6);
+}
+.scanline-overlay{
+  position:absolute; inset:0;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 3px);
+  pointer-events:none;
+  mix-blend-mode:overlay;
+}
+.wave-strip{
+  height:44px;
+  margin-bottom:12px;
+  opacity:0.85;
+}
+.wave-strip svg{width:100%; height:100%; display:block;}
+.trace{
+  fill:none;
+  stroke:var(--phosphor);
+  stroke-width:1.6;
+  filter:drop-shadow(0 0 4px rgba(77,255,160,0.7));
+}
+
+/* ---------- screens (views) ---------- */
+.view{display:none;}
+.view.active{display:block;}
+
+/* home / channel select */
+.eyebrow{
+  font-size:11px;
+  color:var(--amber);
+  letter-spacing:0.18em;
+  margin-bottom:6px;
+}
+.hero-title{
+  font-family:var(--display);
+  font-size:26px;
+  font-weight:700;
+  color:#eafff2;
+  margin:0 0 4px 0;
+  letter-spacing:0.01em;
+}
+.hero-sub{
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:18px;
+  line-height:1.5;
+}
+
+.channels{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.channel-btn{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--panel);
+  border:1px solid #22302a;
+  border-left:3px solid var(--phosphor-dim);
+  color:#d8ffe9;
+  font-family:var(--mono);
+  font-size:13px;
+  padding:12px 14px;
+  border-radius:6px;
+  cursor:pointer;
+  text-align:left;
+  transition:border-color .15s, background .15s, transform .1s;
+}
+.channel-btn:hover{
+  border-left-color:var(--phosphor);
+  background:#141d18;
+  transform:translateX(2px);
+}
+.channel-btn:focus-visible{
+  outline:2px solid var(--amber);
+  outline-offset:2px;
+}
+.ch-tag{
+  font-family:var(--display);
+  font-weight:700;
+  font-size:11px;
+  color:var(--phosphor-dim);
+  min-width:34px;
+}
+.ch-label{font-weight:600; font-size:13px;}
+.ch-desc{font-size:11px; color:var(--muted); margin-top:2px;}
+.ch-text{display:flex; flex-direction:column; gap:2px;}
+
+/* generic panel header w/ back button */
+.panel-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+.back-btn{
+  background:none;
+  border:1px solid #22302a;
+  color:var(--muted);
+  font-family:var(--mono);
+  font-size:11px;
+  padding:6px 10px;
+  border-radius:5px;
+  cursor:pointer;
+}
+.back-btn:hover{color:var(--phosphor); border-color:var(--phosphor-dim);}
+.panel-title{
+  font-family:var(--display);
+  font-size:15px;
+  font-weight:700;
+  color:#eafff2;
+  letter-spacing:0.02em;
+}
+
+/* progress bar */
+.prog-track{
+  height:6px;
+  background:#132018;
+  border-radius:3px;
+  overflow:hidden;
+  margin-bottom:16px;
+  border:1px solid #1c2822;
+}
+.prog-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--phosphor-dim),var(--phosphor));
+  width:0%;
+  transition:width .3s ease;
+}
+
+/* quiz card */
+.qtag{font-size:10px; color:var(--amber); letter-spacing:0.14em; margin-bottom:8px;}
+.qtext{
+  font-family:var(--display);
+  font-size:16px;
+  color:#eafff2;
+  line-height:1.5;
+  margin-bottom:16px;
+  min-height:44px;
+}
+.options{display:flex; flex-direction:column; gap:8px;}
+.opt-btn{
+  display:flex; gap:10px; align-items:flex-start;
+  background:var(--panel);
+  border:1px solid #22302a;
+  color:#d8ffe9;
+  font-family:var(--mono);
+  font-size:13px;
+  padding:11px 12px;
+  border-radius:6px;
+  cursor:pointer;
+  text-align:left;
+  line-height:1.4;
+}
+.opt-btn:hover:not(:disabled){border-color:var(--phosphor-dim); background:#141d18;}
+.opt-btn:disabled{cursor:default;}
+.opt-key{font-weight:700; color:var(--phosphor-dim); min-width:16px;}
+.opt-btn.correct{border-color:var(--phosphor); background:rgba(77,255,160,0.08); color:#eafff2;}
+.opt-btn.wrong{border-color:var(--red); background:rgba(255,92,92,0.08); color:#ffdada;}
+
+.feedback{
+  margin-top:14px;
+  padding:12px;
+  border-radius:6px;
+  font-size:12.5px;
+  line-height:1.5;
+  display:none;
+}
+.feedback.show{display:block;}
+.feedback.good{border:1px solid var(--phosphor-dim); background:rgba(77,255,160,0.06); color:#d8ffe9;}
+.feedback.bad{border:1px solid var(--red); background:rgba(255,92,92,0.06); color:#ffdada;}
+
+.nav-row{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:16px;
+}
+.next-btn{
+  background:var(--phosphor);
+  color:#08150e;
+  border:none;
+  font-family:var(--display);
+  font-weight:700;
+  font-size:12px;
+  padding:10px 18px;
+  border-radius:6px;
+  cursor:pointer;
+  display:none;
+  letter-spacing:0.03em;
+}
+.next-btn.show{display:inline-block;}
+.next-btn:hover{background:#7dffbf;}
+
+/* results screen */
+.results{text-align:center; padding:20px 0;}
+.grade-ring{
+  width:120px; height:120px;
+  margin:0 auto 16px auto;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:30px; font-weight:700;
+  border:3px solid var(--phosphor-dim);
+  color:#eafff2;
+  box-shadow:0 0 24px rgba(77,255,160,0.25);
+}
+.grade-line{font-size:12px; color:var(--muted); margin-bottom:20px;}
+.tier-msg{font-family:var(--display); font-size:15px; color:var(--amber); margin-bottom:22px;}
+.results-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
+.action-btn{
+  background:var(--panel);
+  border:1px solid var(--phosphor-dim);
+  color:#d8ffe9;
+  font-family:var(--mono);
+  font-size:12px;
+  padding:10px 16px;
+  border-radius:6px;
+  cursor:pointer;
+}
+.action-btn:hover{background:#141d18; border-color:var(--phosphor);}
+.action-btn.primary{background:var(--phosphor); color:#08150e; border-color:var(--phosphor); font-weight:600;}
+.action-btn.primary:hover{background:#7dffbf;}
+
+/* flashcards (topic / formula / timed) */
+.deck-meta{
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:11px; color:var(--muted); margin-bottom:10px;
+}
+.module-pill{
+  display:inline-block;
+  font-size:10px;
+  color:var(--amber);
+  border:1px solid #3a3120;
+  background:rgba(255,182,39,0.06);
+  padding:3px 8px;
+  border-radius:12px;
+  margin-bottom:10px;
+  letter-spacing:0.05em;
+}
+.flashcard{
+  min-height:220px;
+  background:var(--panel);
+  border:1px solid #22302a;
+  border-radius:10px;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  cursor:pointer;
+  position:relative;
+}
+.flashcard .hint-corner{
+  position:absolute; top:10px; right:12px;
+  font-size:9px; color:var(--muted); letter-spacing:0.1em;
+}
+.card-face-label{font-size:10px; color:var(--phosphor-dim); letter-spacing:0.14em; margin-bottom:10px;}
+.card-body{
+  font-family:var(--display);
+  font-size:15px;
+  color:#eafff2;
+  line-height:1.6;
+  white-space:pre-wrap;
+}
+.card-body.answer{color:var(--phosphor); font-family:var(--mono); font-size:13.5px;}
+.deck-nav{
+  display:flex;
+  justify-content:space-between;
+  margin-top:14px;
+  gap:8px;
+}
+.deck-nav button{
+  flex:1;
+  background:var(--panel);
+  border:1px solid #22302a;
+  color:#d8ffe9;
+  font-family:var(--mono);
+  font-size:12px;
+  padding:10px;
+  border-radius:6px;
+  cursor:pointer;
+}
+.deck-nav button:hover{border-color:var(--phosphor-dim);}
+.deck-nav button:disabled{opacity:0.35; cursor:default;}
+
+/* timed test specific */
+.timer-band{
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--panel);
+  border:1px solid #22302a;
+  border-radius:8px;
+  padding:10px 14px;
+  margin-bottom:14px;
+}
+.timer-clock{
+  font-family:var(--display);
+  font-size:22px;
+  font-weight:700;
+  color:var(--phosphor);
+  letter-spacing:0.05em;
+}
+.timer-clock.low{color:var(--red);}
+.timer-label{font-size:10px; color:var(--muted); letter-spacing:0.1em;}
+.timer-controls button{
+  background:none; border:1px solid #22302a; color:var(--muted);
+  font-family:var(--mono); font-size:11px; padding:6px 10px; border-radius:5px; cursor:pointer;
+}
+.timer-controls button:hover{color:var(--phosphor); border-color:var(--phosphor-dim);}
+
+/* stats view */
+.stat-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:16px;
+}
+.stat-box{
+  background:var(--panel);
+  border:1px solid #22302a;
+  border-radius:8px;
+  padding:14px;
+}
+.stat-num{font-family:var(--display); font-size:22px; font-weight:700; color:var(--phosphor);}
+.stat-lbl{font-size:10px; color:var(--muted); letter-spacing:0.08em; margin-top:4px;}
+.history-row{
+  display:flex; justify-content:space-between;
+  font-size:12px; padding:8px 0;
+  border-bottom:1px dashed #1e2622;
+  color:#c9e8d6;
+}
+.history-empty{font-size:12px; color:var(--muted); padding:14px 0;}
+
+.footer-note{
+  text-align:center;
+  font-size:10px;
+  color:#3d5548;
+  margin-top:14px;
+  letter-spacing:0.06em;
+}
+
+@media (max-width:480px){
+  .hero-title{font-size:21px;}
+  .screen{min-height:380px; padding:14px;}
+  .grade-ring{width:96px; height:96px; font-size:24px;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .brand .dot{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="chassis">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span> SIGNAL/SYSTEM &nbsp;BENCH&nbsp;TRAINER</div>
+    <div class="readouts">
+      <div>SESSION XP <b id="hdrXp">0</b></div>
+      <div>STREAK <b id="hdrStreak">0</b></div>
+    </div>
+  </div>
+
+  <div class="screen">
+    <div class="scanline-overlay"></div>
+    <div class="wave-strip"><svg id="headerWave" viewBox="0 0 600 44" preserveAspectRatio="none"><path class="trace" id="headerWavePath" d=""/></svg></div>
+
+    <!-- ============ HOME ============ -->
+    <div class="view active" id="view-home">
+      <div class="eyebrow">CHANNEL SELECT</div>
+      <div class="hero-title">Tune in your test prep.</div>
+      <div class="hero-sub">Five instruments, one bench. Pick a channel to start measuring what you know about Signals &amp; Systems.</div>
+      <div class="channels">
+        <button class="channel-btn" onclick="Nav.go('quiz-intro')">
+          <span class="ch-tag">CH1</span>
+          <span class="ch-text"><span class="ch-label">Quick Quiz</span><span class="ch-desc">10 random questions · instant scoring</span></span>
+        </button>
+        <button class="channel-btn" onclick="Nav.go('topic-intro')">
+          <span class="ch-tag">CH2</span>
+          <span class="ch-text"><span class="ch-label">Topic-by-Topic Challenge</span><span class="ch-desc">Work drill sets, module by module</span></span>
+        </button>
+        <button class="channel-btn" onclick="Nav.go('timed-intro')">
+          <span class="ch-tag">CH3</span>
+          <span class="ch-text"><span class="ch-label">30-Minute Timed Test</span><span class="ch-desc">Countdown clock · self-graded</span></span>
+        </button>
+        <button class="channel-btn" onclick="Nav.go('formula-intro')">
+          <span class="ch-tag">CH4</span>
+          <span class="ch-text"><span class="ch-label">Weak Spot / Formula Deck</span><span class="ch-desc">Flip cards for the critical concepts</span></span>
+        </button>
+        <button class="channel-btn" onclick="Nav.go('stats')">
+          <span class="ch-tag">CH5</span>
+          <span class="ch-text"><span class="ch-label">Session Readout</span><span class="ch-desc">Your progress this session</span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============ QUIZ INTRO ============ -->
+    <div class="view" id="view-quiz-intro">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.go('home')">&larr; BACK</button>
+        <div class="panel-title">CH1 · Quick Quiz</div>
+      </div>
+      <p style="font-size:12.5px; color:var(--muted); line-height:1.6;">10 questions pulled at random from the full bank, covering signal classification, transforms, stability, and sampling. Answer, get instant feedback, and see your grade at the end.</p>
+      <button class="action-btn primary" style="width:100%; margin-top:10px; padding:12px;" onclick="Quiz.start()">▶ START QUIZ</button>
+    </div>
+
+    <!-- ============ QUIZ PLAY ============ -->
+    <div class="view" id="view-quiz-play">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.confirmExit('home')">&larr; EXIT</button>
+        <div class="panel-title" id="quizProgLabel">Q1 / 10</div>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="quizProgFill"></div></div>
+      <div class="qtag" id="quizTag">QUESTION</div>
+      <div class="qtext" id="quizQText"></div>
+      <div class="options" id="quizOptions"></div>
+      <div class="feedback" id="quizFeedback"></div>
+      <div class="nav-row"><button class="next-btn" id="quizNextBtn" onclick="Quiz.next()">NEXT →</button></div>
+    </div>
+
+    <!-- ============ QUIZ RESULTS ============ -->
+    <div class="view" id="view-quiz-results">
+      <div class="results">
+        <div class="qtag" style="text-align:center;">MEASUREMENT COMPLETE</div>
+        <div class="grade-ring" id="resultRing">0/10</div>
+        <div class="grade-line" id="resultLine">0% correct</div>
+        <div class="tier-msg" id="resultTier"></div>
+        <div class="results-actions">
+          <button class="action-btn primary" onclick="Quiz.start()">↻ RETRY QUIZ</button>
+          <button class="action-btn" onclick="Nav.go('home')">CHANNEL SELECT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TOPIC INTRO ============ -->
+    <div class="view" id="view-topic-intro">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.go('home')">&larr; BACK</button>
+        <div class="panel-title">CH2 · Topic Challenge</div>
+      </div>
+      <p style="font-size:12.5px; color:var(--muted); line-height:1.6; margin-bottom:12px;">Pick a module. Each card shows a drill problem — tap to reveal the worked answer, then mark whether you had it.</p>
+      <div class="channels" id="topicModuleList"></div>
+    </div>
+
+    <!-- ============ TOPIC PLAY (flashcards) ============ -->
+    <div class="view" id="view-topic-play">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.go('topic-intro')">&larr; MODULES</button>
+        <div class="panel-title" id="topicModTitle"></div>
+      </div>
+      <div class="module-pill" id="topicCardCount"></div>
+      <div class="flashcard" id="topicCard" onclick="Deck.flip('topic')">
+        <span class="hint-corner">TAP TO FLIP</span>
+        <div class="card-face-label" id="topicFaceLabel">PROBLEM</div>
+        <div class="card-body" id="topicCardBody"></div>
+      </div>
+      <div class="deck-nav">
+        <button id="topicPrevBtn" onclick="Deck.prev('topic')">← PREV</button>
+        <button id="topicNextBtn" onclick="Deck.next('topic')">NEXT →</button>
+      </div>
+    </div>
+
+    <!-- ============ TIMED INTRO ============ -->
+    <div class="view" id="view-timed-intro">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.go('home')">&larr; BACK</button>
+        <div class="panel-title">CH3 · Timed Test</div>
+      </div>
+      <p style="font-size:12.5px; color:var(--muted); line-height:1.6;">A 30-minute clock starts the moment you hit start. Work the 5 problems below at your own pace, flip each card to self-check, and beat the buzzer.</p>
+      <button class="action-btn primary" style="width:100%; margin-top:10px; padding:12px;" onclick="Timed.start()">▶ START 30:00 CLOCK</button>
+    </div>
+
+    <!-- ============ TIMED PLAY ============ -->
+    <div class="view" id="view-timed-play">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.confirmExit('home', true)">&larr; EXIT</button>
+        <div class="panel-title" id="timedProgLabel"></div>
+      </div>
+      <div class="timer-band">
+        <div><div class="timer-label">TIME REMAINING</div><div class="timer-clock" id="timedClock">30:00</div></div>
+        <div class="timer-controls"><button id="timedPauseBtn" onclick="Timed.togglePause()">PAUSE</button></div>
+      </div>
+      <div class="module-pill" id="timedAllot"></div>
+      <div class="flashcard" id="timedCard" onclick="Deck.flip('timed')">
+        <span class="hint-corner">TAP TO FLIP</span>
+        <div class="card-face-label" id="timedFaceLabel">PROBLEM</div>
+        <div class="card-body" id="timedCardBody"></div>
+      </div>
+      <div class="deck-nav">
+        <button id="timedPrevBtn" onclick="Deck.prev('timed')">← PREV</button>
+        <button id="timedNextBtn" onclick="Deck.next('timed')">NEXT →</button>
+      </div>
+    </div>
+
+    <!-- ============ TIMED DONE ============ -->
+    <div class="view" id="view-timed-done">
+      <div class="results">
+        <div class="qtag" style="text-align:center;">TEST WINDOW CLOSED</div>
+        <div class="grade-ring" id="timedDoneRing">⏱</div>
+        <div class="grade-line" id="timedDoneLine">Nice work grinding through the set.</div>
+        <div class="results-actions">
+          <button class="action-btn primary" onclick="Timed.start()">↻ RETRY TIMED TEST</button>
+          <button class="action-btn" onclick="Nav.go('home')">CHANNEL SELECT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FORMULA INTRO ============ -->
+    <div class="view" id="view-formula-intro">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.go('home')">&larr; BACK</button>
+        <div class="panel-title">CH4 · Weak Spot Deck</div>
+      </div>
+      <p style="font-size:12.5px; color:var(--muted); line-height:1.6;">The transform pairs, properties, and daily-challenge concepts that trip people up most. Flip through until they're automatic.</p>
+      <button class="action-btn primary" style="width:100%; margin-top:10px; padding:12px;" onclick="Deck.startFormula()">▶ OPEN DECK</button>
+    </div>
+
+    <!-- ============ FORMULA PLAY ============ -->
+    <div class="view" id="view-formula-play">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.go('home')">&larr; EXIT</button>
+        <div class="panel-title">CH4 · Weak Spot Deck</div>
+      </div>
+      <div class="module-pill" id="formulaCardCount"></div>
+      <div class="flashcard" id="formulaCard" onclick="Deck.flip('formula')">
+        <span class="hint-corner">TAP TO FLIP</span>
+        <div class="card-face-label" id="formulaFaceLabel">CONCEPT</div>
+        <div class="card-body" id="formulaCardBody"></div>
+      </div>
+      <div class="deck-nav">
+        <button id="formulaPrevBtn" onclick="Deck.prev('formula')">← PREV</button>
+        <button id="formulaNextBtn" onclick="Deck.next('formula')">NEXT →</button>
+      </div>
+    </div>
+
+    <!-- ============ STATS ============ -->
+    <div class="view" id="view-stats">
+      <div class="panel-head">
+        <button class="back-btn" onclick="Nav.go('home')">&larr; BACK</button>
+        <div class="panel-title">CH5 · Session Readout</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num" id="statAttempts">0</div><div class="stat-lbl">QUIZZES TAKEN</div></div>
+        <div class="stat-box"><div class="stat-num" id="statBest">0%</div><div class="stat-lbl">BEST SCORE</div></div>
+        <div class="stat-box"><div class="stat-num" id="statAvg">0%</div><div class="stat-lbl">AVG SCORE</div></div>
+        <div class="stat-box"><div class="stat-num" id="statXp">0</div><div class="stat-lbl">TOTAL XP</div></div>
+      </div>
+      <div class="panel-title" style="font-size:12px; margin-bottom:8px;">QUIZ LOG</div>
+      <div id="statHistory"><div class="history-empty">No attempts yet this session. Run CH1 to log your first measurement.</div></div>
+      <p style="font-size:10px; color:#3d5548; margin-top:14px;">Stats live for this session only and reset on reload.</p>
+    </div>
+
+  </div><!-- /screen -->
+
+  <div class="footer-note">DIVISION: 500ms/CH · VERT: SIGNALS &amp; SYSTEMS · TRIG: SELF</div>
+</div>
+
+<script>
+/* ================= DATA ================= */
+
+const QUESTION_BANK = [
+  {q:"Signal 9e^(-j6t) belongs to which category?", opts:["Energy signal","Power signal","Neither energy nor power signal","None of the above"], correct:1, why:"It's periodic and never decays, so its energy integral diverges — that makes it a power signal, not an energy signal."},
+  {q:"The Fourier transform of the unit step signal u(t) is:", opts:["1","πδ(Ω) + 1/(jΩ)","1/(jΩ)","1/π"], correct:1, why:"u(t) has a DC component (the impulse term) plus a 1/(jΩ) term from the standard transform pair table."},
+  {q:"Which system is LTI?", opts:["y(t) = x(-t)","y(t) = ∫ from -∞ to t of x(τ)dτ","y(t) = t·x(t)","y(t) = |x(t)|"], correct:1, why:"The running integral is linear (superposition holds) and time-invariant (shifting the input shifts the output identically)."},
+  {q:"The spectrum of a periodic signal has what characteristics?", opts:["Continuous and convergent","Discrete and harmonic","Only harmonic","Only discrete"], correct:1, why:"Periodicity in time forces a discrete frequency spectrum, with energy only at integer multiples of the fundamental (harmonics)."},
+  {q:"Sampling theorem (Nyquist) states that sampling frequency fs must satisfy:", opts:["fs < 2fm","fs = fm","fs > 2fm","fs ≥ fm"], correct:2, why:"Sampling strictly above twice the max frequency avoids aliasing — equality alone isn't sufficient in the strict Nyquist statement."},
+  {q:"Calculate: ∫ from -5 to -1 of f(t)·δ(t-1) dt", opts:["f(1)","f(-1)","0","Undefined"], correct:2, why:"The impulse δ(t-1) fires at t=1, which lies outside the integration window [-5,-1], so the integral is zero."},
+  {q:"System H(s) = (s+1)/(s²+6s+8) is:", opts:["Stable","Unstable","Marginally stable","Cannot be determined"], correct:0, why:"Factoring the denominator gives poles at s=-2 and s=-4 — both strictly in the left half-plane, so the system is stable."},
+  {q:"Z-transform of aⁿ·u[n] with ROC |z| > |a| is:", opts:["z/(z-a)","a/(z-a)","z/(z+a)","1/(z-a)"], correct:0, why:"This is the standard geometric-sequence Z-transform pair, valid whenever the ROC extends outside the pole at z=a."},
+  {q:"If f(t) has bandwidth Δω, then f(3t-2) has bandwidth:", opts:["3Δω","(1/3)Δω","(1/3)(Δω-2)","(1/3)(Δω-6)"], correct:0, why:"Compressing time by a factor of 3 stretches the frequency axis by the same factor — the shift (-2) only delays the signal, it doesn't touch bandwidth."},
+  {q:"The signal sin(2πt) + cos(3πt) has period:", opts:["1","2","4","Not periodic"], correct:1, why:"The individual periods are T1=1 and T2=2/3; the combined signal repeats at their LCM, which is 2."},
+  {q:"Rectangular pulse G(t) of width τ centered at 0 can be written using u(t) as:", opts:["u(t+τ/2) - u(t-τ/2)","u(t) - u(t-τ)","u(t+τ) + u(t-τ)","u(t)·u(t-τ)"], correct:0, why:"Turning the pulse 'on' at -τ/2 and 'off' at +τ/2 is exactly a step up minus a step down at those two edges."},
+  {q:"An LTI system is BIBO stable in discrete time when all poles satisfy:", opts:["|z| > 1","|z| = 1","|z| < 1","poles are real"], correct:2, why:"For discrete-time systems, stability requires every pole strictly inside the unit circle, the discrete analogue of the left-half-plane condition."},
+  {q:"The Laplace transform property for f(t-t0) (time shift) is:", opts:["F(s)·e^(-s t0)","F(s)·e^(s t0)","F(s)/t0","F(s-t0)"], correct:0, why:"Delaying a signal by t0 in time multiplies its Laplace transform by the decaying exponential e^(-s t0)."},
+  {q:"Is x[n] = cos(2n) periodic in the discrete-time sense?", opts:["Yes, period 2π","Yes, period 1","No — 2/2π is irrational","Yes, period 2"], correct:2, why:"Discrete-time periodicity of cos(Ω0 n) requires Ω0/2π to be rational. Since 2/2π is irrational, the sequence never exactly repeats."},
+  {q:"Convolution of any signal x(t) with δ(t-t0) gives:", opts:["x(t)","x(t-t0)","x(t)+t0","0"], correct:1, why:"Convolving with a shifted impulse just reproduces the signal, shifted by that same amount — the sifting/replication property."}
+];
+
+const TOPIC_MODULES = [
+  {title:"Module 1 · Signals Fundamentals", cards:[
+    {q:"Express a rectangular pulse G(t) of width τ (centered at 0) using unit steps u(t).", a:"G(t) = u(t + τ/2) − u(t − τ/2)\n\nA step turns on at −τ/2 and a step turns off at +τ/2, leaving a pulse of height 1 between them."},
+    {q:"Find the even and odd components of f(t) = 1 + t·cos(t) + t²·sin(t).", a:"Even part fe(t) = 1 + t²·sin(t)\nOdd part fo(t) = t·cos(t)\n\nCheck: t·cos(t) is odd (odd × even), t²·sin(t) is odd × odd = even, and the constant 1 is even."},
+    {q:"Calculate: (t³ + 2t² + 3)·δ(t−2)", a:"= (2³ + 2·2² + 3)·δ(t−2) = (8+8+3)·δ(t−2) = 19·δ(t−2)\n\nThe sampling property of δ evaluates the smooth factor at t=2, then keeps it scaling the impulse."}
+  ]},
+  {title:"Module 2 · Fourier Analysis", cards:[
+    {q:"Find the DC component of a square wave with amplitude 2V, period T=1s, duty cycle 50%.", a:"DC = (1/T)∫ over one period = 2V × 0.5 = 1V\n\nThe DC term is just the time-average, i.e. amplitude × duty cycle."},
+    {q:"Given f(t) = Sa(250t) [sinc], find its bandwidth in Hz.", a:"Sa(250t) = sinc with first zero at 250t=π → ω = 250 rad/s → f = 250/(2π) ≈ 39.8 Hz\n\nThe sinc's 'width' in frequency is set directly by the coefficient inside the sinc argument."}
+  ]},
+  {title:"Module 3 · Laplace Transform", cards:[
+    {q:"Find the Laplace transform of f(t) = t²·u(t−1).", a:"Using time-shift on t²·u(t) then re-expanding: L{t²u(t-1)} = e^(-s)·[2/s³ + 2/s² + 1/s]\n\n(Shift (t-1)² + 2(t-1) + 1 = t² back in terms of the shifted variable, transform term by term, then multiply by e^(-s).)"},
+    {q:"Find the inverse Laplace of F(s) = 1/[(s+1)(s+2)].", a:"Partial fractions: F(s) = 1/(s+1) − 1/(s+2)\nf(t) = [e^(-t) − e^(-2t)]·u(t)"},
+    {q:"Find the initial and final values of F(s) = (s²+2s+3)/[(s+1)(s²+4)].", a:"Initial value theorem: f(0+) = lim s→∞ of sF(s) = 1\nFinal value: poles at s=-1 and s=±2j are not all strictly LHP (the ±2j pair sits on the axis), so a single final value does NOT exist — the response has a sustained oscillatory term."}
+  ]},
+  {title:"Module 4 · System Analysis", cards:[
+    {q:"Distinguish zero-input response from zero-state response.", a:"Zero-input response: the output caused only by initial conditions, with the input x(t)=0.\nZero-state response: the output caused only by the input, with all initial conditions set to zero.\nTotal response = zero-input + zero-state (by linearity)."},
+    {q:"What's the relationship between h(t) and H(s)?", a:"h(t) is the impulse response in the time domain; H(s) = L{h(t)} is its Laplace transform, i.e. the system's transfer function. Output Y(s) = H(s)·X(s)."},
+    {q:"When is an LTI continuous-time system stable in the s-domain?", a:"When every pole of H(s) lies strictly in the left half-plane (Re{s} < 0). Poles on the jΩ axis give marginal stability; poles in the right half-plane give instability."}
+  ]}
+];
+
+const TIMED_SET = [
+  {min:5, q:"Find y(t) when x(t) = u(t) and H(s) = (s+1)/(s²+5s+6).", a:"Y(s) = H(s)X(s) = (s+1)/[s(s+2)(s+3)]\nPartial fractions → Y(s) = A/s + B/(s+2) + C/(s+3), solve: A=1/6, B=1/2, C=-2/3\ny(t) = [1/6 + (1/2)e^(-2t) − (2/3)e^(-3t)]·u(t)"},
+  {min:5, q:"A signal x(t) has max frequency 100Hz. What's the Nyquist rate for x(t) + x(2t)?", a:"x(2t) compresses time by 2 → doubles its max frequency to 200Hz.\nThe sum's highest frequency component is the larger one, 200Hz.\nNyquist rate = 2 × 200Hz = 400Hz."},
+  {min:5, q:"Given y[n] − (3/4)y[n-1] + (1/8)y[n-2] = x[n] + (1/3)x[n-1], find H(z).", a:"Take the Z-transform assuming zero initial conditions:\nY(z)[1 − (3/4)z⁻¹ + (1/8)z⁻²] = X(z)[1 + (1/3)z⁻¹]\nH(z) = [1 + (1/3)z⁻¹] / [1 − (3/4)z⁻¹ + (1/8)z⁻²]"},
+  {min:5, q:"The impulse response is h(t) = e^(-2t)u(t). Is this system stable?", a:"Yes. h(t) is absolutely integrable: ∫|h(t)|dt = ∫₀^∞ e^(-2t)dt = 1/2 < ∞.\nEquivalently, the single pole at s=-2 sits in the left half-plane."},
+  {min:10, q:"H(s) = (s-2)/(s²+3s+2). Find: (a) the differential equation, (b) pole-zero plot, (c) stability.", a:"(a) Cross-multiplying Y(s)(s²+3s+2) = X(s)(s-2):\ny''(t) + 3y'(t) + 2y(t) = x'(t) − 2x(t)\n(b) Zero at s=2. Poles at s=-1 and s=-2 (factor s²+3s+2 = (s+1)(s+2)).\n(c) Stable — both poles lie in the left half-plane."}
+];
+
+const FORMULA_DECK = [
+  {front:"Sampling theorem — what's the rule, and what breaks it?", back:"fs > 2·fm (strictly greater than the Nyquist rate). Sampling at or below this causes aliasing, where high frequencies fold back and masquerade as lower ones."},
+  {front:"Stability condition — continuous-time vs discrete-time", back:"Continuous-time: all poles in the left-half s-plane (Re{s} < 0).\nDiscrete-time: all poles strictly inside the unit circle (|z| < 1)."},
+  {front:"Convolution with δ(t) and u(t) — key identities", back:"x(t) * δ(t−t0) = x(t−t0)   (shifting property)\nx(t) * u(t) = ∫ from -∞ to t of x(τ)dτ   (running integral, since u is the integrator's impulse response)"},
+  {front:"Common Laplace pairs to memorize", back:"δ(t) ↔ 1\nu(t) ↔ 1/s\ne^(-αt)u(t) ↔ 1/(s+α)\nsin(Ωt)u(t) ↔ Ω/(s²+Ω²)\ncos(Ωt)u(t) ↔ s/(s²+Ω²)"},
+  {front:"Common Z-transform pairs to memorize", back:"δ[n] ↔ 1, all z\nu[n] ↔ z/(z−1), |z|>1\naⁿu[n] ↔ z/(z−a), |z|>|a|"},
+  {front:"Laplace time-shift & time-scaling properties", back:"f(t−t0) ↔ F(s)·e^(−s t0)\nf(at) ↔ (1/|a|)·F(s/a)   (time compression by a stretches the transform)"},
+  {front:"Daily drill — square wave: τ=2, T=4. Find bandwidth Bf and line spacing Ω1.", back:"Bf = 1/τ = 0.5 Hz\nΩ1 = 2π/T = π/2 rad/s\n\n(Pulse width sets the spectral envelope's null spacing; period sets how tightly the harmonic lines are packed.)"},
+  {front:"Daily drill — evaluate ∫ from -∞ to ∞ of δ(t)·cos(Ω0 t) dt", back:"= cos(0) = 1\n\nThe sifting property of δ(t) picks out the integrand at t=0 exactly."},
+  {front:"Daily drill — inverse Laplace of F(s) = (s+5)/(s²+5s+6)", back:"F(s) = 3/(s+2) − 2/(s+3)\nf(t) = [3e^(−2t) − 2e^(−3t)]·u(t)"},
+  {front:"Daily drill — is x[n] = cos(2n) periodic?", back:"No. Discrete periodicity needs Ω0/2π rational; here it's 2/2π = 1/π, which is irrational."}
+];
+
+/* ================= STATE ================= */
+const State = {
+  xp:0, streak:0,
+  quizAttempts:[], // {score, total, ts}
+};
+
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+/* ================= NAV ================= */
+const Nav = {
+  current:'home',
+  go(name){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    const el = document.getElementById('view-'+name);
+    if(el) el.classList.add('active');
+    this.current = name;
+    if(name==='stats') Stats.render();
+    if(name==='topic-intro') Topic.renderModuleList();
+  },
+  confirmExit(target, isTimed){
+    if(isTimed && Timed.timerId){
+      if(!confirm("Leave the timed test? Your clock will stop.")) return;
+      Timed.stopTimer();
+    }
+    this.go(target);
+  }
+};
+
+/* ================= HEADER WAVEFORM (decorative) ================= */
+(function animateHeaderWave(){
+  const path = document.getElementById('headerWavePath');
+  let t=0;
+  function draw(){
+    let d='';
+    for(let x=0;x<=600;x+=6){
+      const y = 22 + 14*Math.sin((x/40)+t) + 5*Math.sin((x/11)+t*1.7);
+      d += (x===0?'M':'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    }
+    path.setAttribute('d', d);
+    t += 0.045;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+function bumpXp(amount){
+  State.xp += amount;
+  document.getElementById('hdrXp').textContent = State.xp;
+}
+function setStreak(n){
+  State.streak = n;
+  document.getElementById('hdrStreak').textContent = n;
+}
+
+/* ================= QUICK QUIZ ================= */
+const Quiz = {
+  set:[], idx:0, score:0, locked:false,
+  start(){
+    this.set = shuffle(QUESTION_BANK).slice(0,10);
+    this.idx = 0; this.score = 0;
+    setStreak(0);
+    Nav.go('quiz-play');
+    this.render();
+  },
+  render(){
+    this.locked = false;
+    const item = this.set[this.idx];
+    document.getElementById('quizProgLabel').textContent = `Q${this.idx+1} / ${this.set.length}`;
+    document.getElementById('quizProgFill').style.width = ((this.idx)/this.set.length*100)+'%';
+    document.getElementById('quizTag').textContent = 'QUESTION ' + (this.idx+1);
+    document.getElementById('quizQText').textContent = item.q;
+    const optWrap = document.getElementById('quizOptions');
+    optWrap.innerHTML='';
+    const letters=['A','B','C','D'];
+    item.opts.forEach((opt,i)=>{
+      const b=document.createElement('button');
+      b.className='opt-btn';
+      b.innerHTML = `<span class="opt-key">${letters[i]}</span><span>${opt}</span>`;
+      b.onclick=()=>this.answer(i);
+      optWrap.appendChild(b);
+    });
+    const fb=document.getElementById('quizFeedback');
+    fb.className='feedback'; fb.textContent='';
+    document.getElementById('quizNextBtn').classList.remove('show');
+  },
+  answer(i){
+    if(this.locked) return;
+    this.locked = true;
+    const item = this.set[this.idx];
+    const buttons = document.querySelectorAll('#quizOptions .opt-btn');
+    buttons.forEach((b,idx)=>{
+      b.disabled = true;
+      if(idx===item.correct) b.classList.add('correct');
+      if(idx===i && i!==item.correct) b.classList.add('wrong');
+    });
+    const fb=document.getElementById('quizFeedback');
+    if(i===item.correct){
+      this.score++;
+      setStreak(State.streak+1);
+      bumpXp(10 + (State.streak>=3?5:0));
+      fb.className='feedback show good';
+      fb.textContent = '✓ Correct — ' + item.why;
+    } else {
+      setStreak(0);
+      fb.className='feedback show bad';
+      fb.textContent = '✕ Not quite — ' + item.why;
+    }
+    document.getElementById('quizProgFill').style.width = ((this.idx+1)/this.set.length*100)+'%';
+    document.getElementById('quizNextBtn').classList.add('show');
+    document.getElementById('quizNextBtn').textContent = (this.idx===this.set.length-1)? 'FINISH →' : 'NEXT →';
+  },
+  next(){
+    if(this.idx < this.set.length-1){
+      this.idx++;
+      this.render();
+    } else {
+      this.finish();
+    }
+  },
+  finish(){
+    State.quizAttempts.push({score:this.score, total:this.set.length, ts:new Date()});
+    bumpXp(this.score===this.set.length ? 25 : 0);
+    Nav.go('quiz-results');
+    const pct = Math.round(this.score/this.set.length*100);
+    document.getElementById('resultRing').textContent = `${this.score}/${this.set.length}`;
+    document.getElementById('resultLine').textContent = `${pct}% correct`;
+    let tier;
+    if(this.score<=4) tier = "🔴 Needs practice — review the fundamentals.";
+    else if(this.score<=7) tier = "🟡 Good foundation — target your weak spots.";
+    else tier = "🟢 Excellent — you're ready for the real test.";
+    document.getElementById('resultTier').textContent = tier;
+  }
+};
+
+/* ================= GENERIC FLASHCARD DECK ENGINE ================= */
+const Deck = {
+  decks:{},
+  flip(key){
+    const d = this.decks[key];
+    d.flipped = !d.flipped;
+    this.renderCard(key);
+  },
+  prev(key){
+    const d = this.decks[key];
+    if(d.idx>0){ d.idx--; d.flipped=false; this.renderCard(key); this.renderNav(key); }
+  },
+  next(key){
+    const d = this.decks[key];
+    if(d.idx < d.items.length-1){ d.idx++; d.flipped=false; this.renderCard(key); this.renderNav(key); }
+    else if(key==='timed'){ Timed.finish(); }
+  },
+  renderCard(key){
+    const d = this.decks[key];
+    const item = d.items[d.idx];
+    document.getElementById(key+'FaceLabel').textContent = d.flipped ? 'ANSWER / EXPLANATION' : (d.frontLabel||'PROBLEM');
+    document.getElementById(key+'CardBody').textContent = d.flipped ? item.a : item.q;
+    document.getElementById(key+'CardBody').className = 'card-body' + (d.flipped?' answer':'');
+  },
+  renderNav(key){
+    const d = this.decks[key];
+    document.getElementById(key+'PrevBtn').disabled = d.idx===0;
+    const nextBtn = document.getElementById(key+'NextBtn');
+    if(key==='timed'){
+      nextBtn.disabled=false;
+      nextBtn.textContent = (d.idx===d.items.length-1)?'FINISH TEST':'NEXT →';
+    } else {
+      nextBtn.disabled = d.idx===d.items.length-1;
+      nextBtn.textContent='NEXT →';
+    }
+  },
+
+  startFormula(){
+    this.decks['formula'] = {items:FORMULA_DECK.map(c=>({q:c.front,a:c.back})), idx:0, flipped:false, frontLabel:'CONCEPT'};
+    Nav.go('formula-play');
+    document.getElementById('formulaCardCount').textContent = `CARD 1 / ${FORMULA_DECK.length}`;
+    this.renderCard('formula');
+    this.renderNav('formula');
+    this._wireCount('formula');
+  },
+  _wireCount(key){
+    const d=this.decks[key];
+    const orig = this.renderNav.bind(this);
+    // patch to also update count pill on nav changes
+    const countEl = document.getElementById(key+'CardCount');
+    if(countEl){
+      const update = ()=> countEl.textContent = `CARD ${d.idx+1} / ${d.items.length}`;
+      const prevBtn=document.getElementById(key+'PrevBtn'), nextBtn=document.getElementById(key+'NextBtn');
+      prevBtn.addEventListener('click', update);
+      nextBtn.addEventListener('click', update);
+    }
+  }
+};
+
+/* ================= TOPIC CHALLENGE ================= */
+const Topic = {
+  renderModuleList(){
+    const wrap = document.getElementById('topicModuleList');
+    wrap.innerHTML='';
+    TOPIC_MODULES.forEach((mod,i)=>{
+      const b=document.createElement('button');
+      b.className='channel-btn';
+      b.innerHTML = `<span class="ch-tag">M${i+1}</span><span class="ch-text"><span class="ch-label">${mod.title.split('·')[1].trim()}</span><span class="ch-desc">${mod.cards.length} drill cards</span></span>`;
+      b.onclick = ()=> this.open(i);
+      wrap.appendChild(b);
+    });
+  },
+  open(i){
+    const mod = TOPIC_MODULES[i];
+    Deck.decks['topic'] = {items:mod.cards, idx:0, flipped:false, frontLabel:'PROBLEM'};
+    Nav.go('topic-play');
+    document.getElementById('topicModTitle').textContent = mod.title;
+    document.getElementById('topicCardCount').textContent = `CARD 1 / ${mod.cards.length}`;
+    Deck.renderCard('topic');
+    Deck.renderNav('topic');
+    Deck._wireCount('topic');
+  }
+};
+
+/* ================= TIMED TEST ================= */
+const Timed = {
+  timerId:null, remaining:1800, paused:false,
+  start(){
+    Deck.decks['timed'] = {items:TIMED_SET.map(t=>({q:`(${t.min} min) `+t.q, a:t.a})), idx:0, flipped:false, frontLabel:'PROBLEM'};
+    this.remaining = 1800; this.paused=false;
+    Nav.go('timed-play');
+    document.getElementById('timedProgLabel').textContent = `Problem 1 / ${TIMED_SET.length}`;
+    document.getElementById('timedAllot').textContent = `SUGGESTED: ${TIMED_SET[0].min} MIN`;
+    document.getElementById('timedPauseBtn').textContent='PAUSE';
+    Deck.renderCard('timed');
+    Deck.renderNav('timed');
+    this.updateClock();
+    this.stopTimer();
+    this.timerId = setInterval(()=>this.tick(), 1000);
+    // patch nav buttons to update progress label + allotment
+    const prevBtn=document.getElementById('timedPrevBtn'), nextBtn=document.getElementById('timedNextBtn');
+    prevBtn.onclick = ()=>{ Deck.prev('timed'); this.syncLabels(); };
+    nextBtn.onclick = ()=>{ Deck.next('timed'); if(Deck.decks['timed']) this.syncLabels(); };
+  },
+  syncLabels(){
+    const d = Deck.decks['timed'];
+    if(!d) return;
+    document.getElementById('timedProgLabel').textContent = `Problem ${d.idx+1} / ${TIMED_SET.length}`;
+    document.getElementById('timedAllot').textContent = `SUGGESTED: ${TIMED_SET[d.idx].min} MIN`;
+  },
+  tick(){
+    if(this.paused) return;
+    this.remaining--;
+    if(this.remaining<=0){ this.remaining=0; this.updateClock(); this.finish(); return; }
+    this.updateClock();
+  },
+  updateClock(){
+    const m=Math.floor(this.remaining/60), s=this.remaining%60;
+    const clock = document.getElementById('timedClock');
+    clock.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    clock.classList.toggle('low', this.remaining<=120);
+  },
+  togglePause(){
+    this.paused = !this.paused;
+    document.getElementById('timedPauseBtn').textContent = this.paused ? 'RESUME' : 'PAUSE';
+  },
+  stopTimer(){
+    if(this.timerId){ clearInterval(this.timerId); this.timerId=null; }
+  },
+  finish(){
+    this.stopTimer();
+    bumpXp(20);
+    Nav.go('timed-done');
+    const leftover = this.remaining;
+    const line = leftover>0
+      ? `You finished with ${Math.floor(leftover/60)}m ${leftover%60}s on the clock.`
+      : `Buzzer went off — review any cards you didn't get to.`;
+    document.getElementById('timedDoneLine').textContent = line;
+  }
+};
+
+/* ================= STATS ================= */
+const Stats = {
+  render(){
+    const attempts = State.quizAttempts;
+    document.getElementById('statAttempts').textContent = attempts.length;
+    document.getElementById('statXp').textContent = State.xp;
+    if(attempts.length===0){
+      document.getElementById('statBest').textContent='0%';
+      document.getElementById('statAvg').textContent='0%';
+      document.getElementById('statHistory').innerHTML = '<div class="history-empty">No attempts yet this session. Run CH1 to log your first measurement.</div>';
+      return;
+    }
+    const pcts = attempts.map(a=>a.score/a.total*100);
+    const best = Math.round(Math.max(...pcts));
+    const avg = Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length);
+    document.getElementById('statBest').textContent = best+'%';
+    document.getElementById('statAvg').textContent = avg+'%';
+    const hist = document.getElementById('statHistory');
+    hist.innerHTML='';
+    attempts.slice().reverse().forEach((a,i)=>{
+      const row=document.createElement('div');
+      row.className='history-row';
+      const timeStr = a.ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      row.innerHTML = `<span>Attempt ${attempts.length-i} · ${timeStr}</span><span>${a.score}/${a.total}</span>`;
+      hist.appendChild(row);
+    });
+  }
+};
+</script>
+</body>
+</html>
